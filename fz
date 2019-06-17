@@ -1,0 +1,241 @@
+function registerAccount()
+{
+var username=$('#registerUsername').val();
+var email=$('#registerEmail').val();
+var password=$('#registerPassword').val();
+var repassword=$('#registerRePassword').val();
+
+$.ajax({
+			type: "POST",
+			data: {login: username,email:email,password:password,repassword:repassword},
+			url: "ajax/registerAccount.php",
+			success: function(result){
+			var result=JSON.parse(result);
+			if (result.success)	
+			{
+				$('#registerBox .msg').html('<font color=green>'+getTranslation("account_created")+'.</font>');
+				$('#registerUsername').val('');
+				$('#registerEmail').val('');
+				$('#registerPassword').val('');
+				$('#registerRePassword').val('');
+				
+				$('#registerBox .loginButton').hide();
+				setTimeout(function(){location.reload();},1000);
+			}
+			else
+			{
+				$('#registerBox .msg').html('<font color=red>'+result.msg+'</font>');
+			}
+			}
+});
+	
+}
+
+function login()
+{
+var username=$('#loginUsername').val();
+var password=$('#loginPassword').val();
+
+$.ajax({
+			type: "POST",
+			data: {login: username,password:password},
+			url: "ajax/login.php",
+			success: function(result){
+			var result=JSON.parse(result);
+			if (result.success)	
+			{
+				$('#loginBox .msg').html('<font color=green>'+getTranslation("logged_in")+'!</font>');
+				$('#loginBox .loginButton').hide();
+				location.reload();
+			}
+			else
+			{
+				$('#loginBox .msg').html('<font color=red>'+result.msg+'</font>');
+			}
+			}
+});
+	
+}
+
+function claimDailyQuest(id)
+{
+
+$.ajax({
+			type: "POST",
+			data: {id: id},
+			url: "ajax/claimDailyQuest.php",
+			success: function(result){
+			var result=JSON.parse(result);
+			if (result.success)	
+			{
+				$('.accountExperienceBar span').text(result.newExperience+'/'+result.experienceToLevel);
+				//console.log(result.experiencePercent);
+				
+				$('.accountExperienceBar .bar').css({
+					transition: 'width 1.5s ease-out',
+					width: result.experiencePercent+'%'
+				});
+
+				if (result.refresh)
+				setTimeout(function(){location.reload()},4000);
+			$('.quest[data-id="'+id+'"]').css({
+				opacity:0,
+			});
+			$('.quest[data-id="'+id+'"]').html('<br>'+lang["reward_gained"]);	
+
+			$('.quest[data-id="'+id+'"]').css({
+				transition:'opacity 2s linear',
+				opacity:1,
+			});
+			}
+		}
+});	
+}
+
+var lockPremiumBuy=false;
+function buyPremium(id)
+{
+if (confirm(getTranslation("are_you_sure")) != true) return;
+if (lockPremiumBuy) return;
+lockPremiumBuy=true;
+
+$.ajax({
+			type: "POST",
+			data: {id: id},
+			url: "ajax/buyPremium.php",
+			success: function(result){
+			var result=JSON.parse(result);
+			if (result.success)	
+			{
+				location.reload();
+			}
+		}
+});	
+}
+
+function bonusCode()
+{
+var code=$('#bonusCode').val();
+
+$.ajax({
+			type: "POST",
+			data: {code: code},
+			url: "ajax/bonusCode.php",
+			success: function(result){
+				console.log(result);
+			var result=JSON.parse(result);
+			if (result.success)	
+			{
+				$('#bonusCodeDiv .msg').html('<font color=green>Code valid</font>');
+				$('#bonusCodeDiv .loginButton').hide();
+				
+				gtag('event', code, {'event_category' : 'bonusCode'});
+				
+			setTimeout(function(){location.reload();},1000);
+			}
+			else
+			{
+				$('#bonusCodeDiv .msg').html('<font color=red>'+result.msg+'</font>');
+			}
+			}
+});
+	
+}
+
+function showHighscores(evt, name) {
+  var i, tabcontent, tablinks;
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+  tablinks = document.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+  document.getElementById(name).style.display = "block";
+  evt.currentTarget.className += " active";
+}
+
+
+function setCookie(name,value,days) {
+    var expires = "";
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+function getCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0;i < ca.length;i++) {
+        var c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+}
+function eraseCookie(name) {   
+    document.cookie = name+'=; Max-Age=-99999999;';  
+}
+
+
+var shareBonus=false;
+$(document).ready(function() {
+
+
+if (getCookie('sb')=='1')
+{
+	shareBonus=true;
+	$('.footer-left .bonusInfo').html('20% exp bonus: active');
+	$('#expBonusInfo').append(' + 20% (twitter bonus)');
+}
+else
+{
+	shareBonus=false;
+	$('.footer-left .bonusInfo').html('20% exp bonus: inactive');	
+}
+	
+if (typeof twttr!='undefined')
+twttr.events.bind('click', function(event) {
+	setCookie('sb','1',31);
+	shareBonus=true;
+	$('.footer-left .bonusInfo').html('20% exp bonus: active');
+	$('#expBonusInfo').append(' + 20% (twitter bonus)');
+	
+	gtag('event', 'tweeter', {
+	'event_category' : 'shareBonus'
+	});
+	
+	});
+
+
+if (typeof useruser!='undefined' && typeof user.playName !='undefined')
+		$('.yourNameInput').val(user.playName);
+
+if (getCookie('playname')!=null)
+	$('.yourNameInput').val(getCookie('playname'));
+
+});
+
+function timers()
+{
+	if (typeof joinedGame!='undefined' && joinedGame) return;
+	$("[data-timer]").each( function(){
+		var timeleft = parseInt($(this).data("timer"))-1;
+		if (timeleft<0) timeleft=0;
+		$(this).data("timer",timeleft);
+
+		var minutes = "0" + (Math.floor(timeleft / 60) % 60);
+		var seconds = "0" + (timeleft % 60);
+        var hours = "0" + (Math.floor(timeleft / 3600));
+
+		var formattedTime = hours.substr(-2) + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+		$(this).text(formattedTime);
+	});
+
+
+}
+
+setInterval(timers,1000);
