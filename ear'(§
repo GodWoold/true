@@ -1,0 +1,211 @@
+// ==UserScript==
+// @name         Floor Speed Switch Petals + Widest Visibility Area
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  try to take over the world!
+// @author       You
+// @match        https://florr.io/*
+// @run-at       document-start
+// @require      https://code.jquery.com/jquery-latest.min.js
+// @grant        none
+// ==/UserScript==
+
+function setCookie(name,value,days) {
+    var expires = "";
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+
+function getCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0;i < ca.length;i++) {
+        var c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+}
+
+$(document.getElementById('canvas')).ready(function() {
+    var Playing = false;
+    var overlay = document.createElement("div");
+    overlay.style = "pointer-events: none; position: fixed; top:20px; left:10px; font-family: 'Comic Sans MS', cursive, sans-serif; color: rgba(255,255,255,0.5); font-style: normal; font-variant: normal;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;outline: 0;";
+    document.body.appendChild(overlay);
+    devicePixelRatio = Number(getCookie("devicePixelRatio")) || 2;
+    overlay.innerHTML = `<p>O- or P+ for pixel ratio [${Math.round(devicePixelRatio*100)/100}] (lower = better fps)</p>`
+    overlay.className = "menu";
+    var overlay1 = document.createElement("div");
+    overlay1.style = "pointer-events: none; position: fixed; top:40px; left:10px; font-family: 'Comic Sans MS', cursive, sans-serif; color: rgba(255,255,255,0.5); font-style: normal; font-variant: normal;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;outline: 0;";
+    overlay1.className = "menu";
+    document.body.appendChild(overlay1);
+    var stepTime = Number(getCookie("stepTime")) || 45;
+    overlay1.innerHTML = `<p>L- or M+ for switch speed change [${stepTime}ms]</p>`
+    var overlay2 = document.createElement("div");
+    overlay2.style = "pointer-events: none; position: fixed; top:60px; left:10px; font-family: 'Comic Sans MS', cursive, sans-serif; color: rgba(255,255,255,0.5); font-style: normal; font-variant: normal;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;outline: 0;";
+    overlay2.className = "menu";
+    document.body.appendChild(overlay2);
+    overlay2.innerHTML = `<p>Use F to delete the last petal</p>`
+    var overlay3 = document.createElement("div");
+    overlay3.style = "pointer-events: none; position: fixed; top:80px; left:10px; font-family: 'Comic Sans MS', cursive, sans-serif; color: rgba(255,255,255,0.5); font-style: normal; font-variant: normal;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;outline: 0;";
+    overlay3.className = "menu";
+    document.body.appendChild(overlay3);
+    overlay3.innerHTML = `<p>Use W up to ; toggle from the 1st up to 8th petal</p>`
+    var overlay6 = document.createElement("div");
+    overlay6.style = "pointer-events: none; position: fixed; top:100px; left:10px; font-family: 'Comic Sans MS', cursive, sans-serif; color: rgba(255,255,255,0.5); font-style: normal; font-variant: normal;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;outline: 0;";
+    overlay6.className = "menu";
+    document.body.appendChild(overlay6);
+    var wavySpeed = getCookie("wavySpeed") || 450;
+    overlay6.innerHTML = `<p>Use R to toggle wavy mode [OFF] of interval ${wavySpeed}ms (U+ I-)</p>`
+    var overlay5 = document.createElement("div");
+    overlay5.style = "pointer-events: none; position: fixed; top:150px; left:10px; font-family: 'Comic Sans MS', cursive, sans-serif; color: rgba(255,0,0,0.5); font-style: normal; font-variant: normal;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;outline: 0;";
+    document.body.appendChild(overlay5);
+    overlay5.innerHTML = `<p>[PRESS ENTER FIRST]</p>`
+    var overlay4 = document.createElement("div");
+    overlay4.style = "pointer-events: none; position: fixed; top:120px; left:10px; font-family: 'Comic Sans MS', cursive, sans-serif; color: rgba(255,255,255,0.5); font-style: normal; font-variant: normal;-webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;outline: 0;";
+    overlay4.className = "menu";
+    document.body.appendChild(overlay4);
+    overlay4.innerHTML = `<p>Use Z to toggle menu display</p>`
+    var eventObj;
+    var eventObj1;
+    var eventObj2;
+    var wavy = false;
+    var oktoggle = true;
+    var okbin = true;
+    var keyss = {8: false, 9: false, 13: false, 16: false, 17: false, 18: false, 20: false, 27: false, 32: false, 35: false, 36: false, 37: false, 48: false, 49: false, 50: false, 51: false, 52: false, 53: false, 54: false, 55: false, 56: false, 57: false, 65: false, 66: false, 67: false, 68: false, 69: false, 70: false, 71: false, 72: false, 73: false, 74: false, 75: false, 76: false, 77: false, 78: false, 79: false, 80: false, 81: false, 82: false, 83: false, 84: false, 85: false, 86: false, 87: false, 88: false, 89: false, 90: false, 91: false, 93: false, 186: false, 187: false, 188: false, 189: false, 190: false, 191: false, 192: false, 219: false, 220: false, 221: false, 222: false, 229: false};
+    onkeydown = onkeyup = function(e){
+        e = e || event; // to deal with IE
+        keyss[e.keyCode] = e.type == 'keydown';
+        if (e.keyCode == 70 && keyss[e.keyCode] && okbin) {
+            okbin = false;
+            eventObj = document.createEvent("Events"); eventObj.initEvent('keydown', true, true); eventObj.keyCode = 27; window.dispatchEvent(eventObj);
+            eventObj = document.createEvent("Events"); eventObj.initEvent('keyup', true, true); eventObj.keyCode = 27; window.dispatchEvent(eventObj);
+            setTimeout(function(){
+                eventObj = document.createEvent("Events"); eventObj.initEvent('keydown', true, true); eventObj.keyCode = 81; window.dispatchEvent(eventObj);
+                eventObj = document.createEvent("Events"); eventObj.initEvent('keyup', true, true); eventObj.keyCode = 81; window.dispatchEvent(eventObj);
+                setTimeout(function(){
+                    eventObj = document.createEvent("Events"); eventObj.initEvent('keydown', true, true); eventObj.keyCode = 81; window.dispatchEvent(eventObj);
+                    eventObj = document.createEvent("Events"); eventObj.initEvent('keyup', true, true); eventObj.keyCode = 81; window.dispatchEvent(eventObj);
+                    setTimeout(function(){
+                        eventObj = document.createEvent("Events"); eventObj.initEvent('keydown', true, true); eventObj.keyCode = 84; window.dispatchEvent(eventObj);
+                        eventObj = document.createEvent("Events"); eventObj.initEvent('keyup', true, true); eventObj.keyCode = 84; window.dispatchEvent(eventObj);
+                        setTimeout(function(){
+                            eventObj = document.createEvent("Events"); eventObj.initEvent('keydown', true, true); eventObj.keyCode = 27; window.dispatchEvent(eventObj);
+                            eventObj = document.createEvent("Events"); eventObj.initEvent('keyup', true, true); eventObj.keyCode = 27; window.dispatchEvent(eventObj);
+                            okbin = true;
+                        },stepTime)
+                    },stepTime)
+                },stepTime*1.5)
+            },stepTime)
+        }
+        if ((keyss[87]||keyss[88]||keyss[67]||keyss[86]||keyss[66]||keyss[78]||keyss[188]||keyss[186]) && oktoggle && e.key != "<") {
+            oktoggle = false;
+            toggleSA(keyss[87]?49:keyss[88]?50:keyss[67]?51:keyss[86]?52:keyss[66]?53:keyss[78]?54:keyss[188]?55:56)
+        }
+        if (e.keyCode == 13 && keyss[13] && !Playing) {
+            Playing = true;
+            overlay5.style.display = "none"
+        }
+        if (Playing) {
+            if (e.keyCode == 79 && keyss[79]) {
+                if (Math.round(devicePixelRatio*100)/100-0.1 > 0) {
+                    devicePixelRatio = Math.max(0.1,devicePixelRatio-0.1)
+                    setCookie("devicePixelRatio",devicePixelRatio,Infinity)
+                    overlay.innerHTML = `<p>O- or P+ for pixel ratio [${Math.round(devicePixelRatio*100)/100}] (lower = better fps)</p>`
+                    window.innerWidth -= 1
+                }
+            } else if (e.keyCode == 80 && keyss[80]) {
+                devicePixelRatio  += 0.1
+                setCookie("devicePixelRatio",devicePixelRatio,Infinity)
+                overlay.innerHTML = `<p>O- or P+ for pixel ratio [${Math.round(devicePixelRatio*100)/100}] (lower = better fps)</p>`
+                window.innerWidth += 1
+            }
+            if (e.keyCode == 76 && keyss[76]) {
+                stepTime = Math.max(0,stepTime-1)
+                setCookie("stepTime",stepTime,Infinity)
+                overlay1.innerHTML = `<p>L- or M+ for switch speed change [${stepTime}ms]</p>`
+            } else if (e.keyCode == 77 && keyss[77]) {
+                stepTime++
+                setCookie("stepTime",stepTime,Infinity)
+                overlay1.innerHTML = `<p>L- or M+ for switch speed change [${stepTime}ms]</p>`
+            }
+            if (e.keyCode == 90 && keyss[90]) {
+                for (var i = 0; i < document.getElementsByClassName("menu").length; i++) {
+                    document.getElementsByClassName("menu")[i].style.display = document.getElementsByClassName("menu")[i].style.display != "none"? "none" : "block";
+                }
+            }
+            if (e.keyCode == 82 && keyss[82]) {
+                wavy = !wavy;
+                overlay6.innerHTML = `<p>Use R to toggle wavy mode [${wavy? "ON" : "OFF"}] of interval ${wavySpeed}ms (U+ I-)</p>`
+                if (!wavy) {
+                    eventObj2 = document.createEvent("Events"); eventObj2.initEvent('keyup', true, true); eventObj2.keyCode = 16; window.dispatchEvent(eventObj2);
+                    eventObj2 = document.createEvent("Events"); eventObj2.initEvent('keyup', true, true); eventObj2.keyCode = 32; window.dispatchEvent(eventObj2);
+                }
+            }
+            if (e.keyCode == 85 && keyss[85]) {
+                wavySpeed = Math.max(wavySpeed-1,1)
+                setCookie("wavySpeed",wavySpeed,Infinity)
+                overlay6.innerHTML = `<p>Use R to toggle wavy mode [${wavy? "ON" : "OFF"}] of interval ${wavySpeed}ms (U+ I-)</p>`
+            } else if (e.keyCode == 73 && keyss[73]) {
+                wavySpeed++
+                setCookie("wavySpeed",wavySpeed,Infinity)
+                overlay6.innerHTML = `<p>Use R to toggle wavy mode [${wavy? "ON" : "OFF"}] of interval ${wavySpeed}ms (U+ I-)</p>`
+            }
+        }
+    }
+    function wavyInt() {
+        setTimeout(function(){
+            if (wavy) {
+                setTimeout(function(){
+                    if (wavy) {
+                        eventObj2 = document.createEvent("Events"); eventObj2.initEvent('keyup', true, true); eventObj2.keyCode = 16; window.dispatchEvent(eventObj2);
+                        eventObj2 = document.createEvent("Events"); eventObj2.initEvent('keydown', true, true); eventObj2.keyCode = 32; window.dispatchEvent(eventObj2);
+                    }
+                },wavySpeed/2)
+                eventObj2 = document.createEvent("Events"); eventObj2.initEvent('keyup', true, true); eventObj2.keyCode = 32; window.dispatchEvent(eventObj2);
+                eventObj2 = document.createEvent("Events"); eventObj2.initEvent('keydown', true, true); eventObj2.keyCode = 16; window.dispatchEvent(eventObj2);
+            }
+            wavyInt();
+        },wavySpeed)
+    }
+    wavyInt();
+    function setTO(i,key,rkey) {
+        setTimeout(function() {
+            eventObj1 = document.createEvent("Events"); eventObj1.initEvent('keydown', true, true); eventObj1.keyCode = key-(rkey-i); window.dispatchEvent(eventObj1);
+            eventObj1 = document.createEvent("Events"); eventObj1.initEvent('keyup', true, true); eventObj1.keyCode = key-(rkey-i); window.dispatchEvent(eventObj1);
+            setTimeout(function() {
+                if (i < rkey) {
+                    eventObj1 = document.createEvent("Events"); eventObj1.initEvent('keydown', true, true); eventObj1.keyCode = 69; window.dispatchEvent(eventObj1);
+                    eventObj1 = document.createEvent("Events"); eventObj1.initEvent('keyup', true, true); eventObj1.keyCode = 69; window.dispatchEvent(eventObj1);
+                } else {
+                    eventObj1 = document.createEvent("Events"); eventObj1.initEvent('keydown', true, true); eventObj1.keyCode = 27; window.dispatchEvent(eventObj1);
+                    eventObj1 = document.createEvent("Events"); eventObj1.initEvent('keyup', true, true); eventObj1.keyCode = 27; window.dispatchEvent(eventObj1);
+                    oktoggle = true;
+                }
+            },stepTime)
+        },i*stepTime*2)
+    }
+    function toggleSA(key) {
+        var rkey = key-48;
+        eventObj1 = document.createEvent("Events"); eventObj1.initEvent('keydown', true, true); eventObj1.keyCode = 27; window.dispatchEvent(eventObj1);
+        eventObj1 = document.createEvent("Events"); eventObj1.initEvent('keyup', true, true); eventObj1.keyCode = 27; window.dispatchEvent(eventObj1);
+        setTimeout(function(){
+            eventObj1 = document.createEvent("Events"); eventObj1.initEvent('keydown', true, true); eventObj1.keyCode = 69; window.dispatchEvent(eventObj1);
+            eventObj1 = document.createEvent("Events"); eventObj1.initEvent('keyup', true, true); eventObj1.keyCode = 69; window.dispatchEvent(eventObj1);
+            for (var i = 1; i <= rkey; i++) {
+                setTO(i,key,rkey);
+            }
+        },stepTime)
+    }
+    setInterval(function() {
+        if (!!document.getElementById("canvas") && document.getElementById("canvas").width != Math.floor(1440/810*document.getElementById("canvas").height)) {
+            document.getElementById("canvas").width = 1440/810*document.getElementById("canvas").height
+        }
+    },0)
+})
+
+
